@@ -1,113 +1,243 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from "react";
+
+const Page = () => {
+  const [studentId, setStudentId] = useState("");
+  const [semesterId, setSemesterId] = useState("");
+  const [studentInfo, setStudentInfo] = useState(null);
+  const [result, setResult] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState("#7378f7"); // Default primary color
+
+  const semesterOptions = [
+    { label: "Fall-2024", value: "243" },
+    { label: "Summer-2024", value: "242" },
+    { label: "Spring-2024", value: "241" },
+    { label: "Fall-2023", value: "233" },
+    { label: "Summer-2023", value: "232" },
+    { label: "Spring-2023", value: "231" },
+  ];
+
+  const fetchResults = async () => {
+    if (!studentId || !semesterId) {
+      setError("Both Student ID and Semester ID are required.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const studentInfoRes = await fetch(
+        `http://software.diu.edu.bd:8006/result/studentInfo?studentId=${studentId}`
+      );
+      if (!studentInfoRes.ok) {
+        throw new Error(`Error fetching student info: ${studentInfoRes.status}`);
+      }
+      const studentInfoData = await studentInfoRes.json();
+      setStudentInfo(studentInfoData);
+
+      const resultRes = await fetch(
+        `http://software.diu.edu.bd:8189/result?studentId=${studentId}&semesterId=${semesterId}`
+      );
+      if (!resultRes.ok) {
+        throw new Error(`Error fetching results: ${resultRes.status}`);
+      }
+      const resultData = await resultRes.json();
+      setResult(resultData);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch data. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateCGPA = () => {
+    if (result.length === 0) return 0;
+
+    let totalCredits = 0;
+    let weightedPoints = 0;
+
+    result.forEach((course) => {
+      const credit = parseFloat(course?.totalCredit || 0);
+      const gradePoint = parseFloat(course?.pointEquivalent || 0);
+
+      totalCredits += credit;
+      weightedPoints += credit * gradePoint;
+    });
+
+    return totalCredits > 0 ? (weightedPoints / totalCredits).toFixed(2) : 0;
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen p-6 bg-gradient-to-b from-blue-50 to-blue-100 flex flex-col items-center">
+      <div
+        className="max-w-5xl w-full bg-white rounded-lg p-6"
+        // Removed the box-shadow styling here
+      >
+        {/* Color Picker Section */}
+        <div className="absolute top-6 right-6">
+          <label className="text-lg font-semibold text-gray-800">Primary Color:</label>
+          <input
+            type="color"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+            className="ml-2 border-2 border-gray-300 rounded-md"
+          />
+        </div>
+
+        <h1
+          className="text-3xl font-bold text-center mb-6"
+          style={{ color: primaryColor }}
+        >
+          Student Results Portal
+        </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Enter Student ID"
+            className="input input-bordered w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2"
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+          />
+          <select
+            className="select select-bordered w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2"
+            value={semesterId}
+            onChange={(e) => setSemesterId(e.target.value)}
           >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            <option value="">Select Semester</option>
+            {semesterOptions.map((semester) => (
+              <option key={semester.value} value={semester.value}>
+                {semester.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          className="btn w-full text-white px-4 py-2 rounded-md hover:bg-[#5cb3e5] disabled:bg-gray-400"
+          style={{ backgroundColor: primaryColor }}
+          onClick={fetchResults}
+          disabled={loading}
+        >
+          {loading ? "Loading..." : "Fetch Results"}
+        </button>
+        {error && <div className="text-red-500 mt-4">{error}</div>}
+
+        {studentInfo && (
+          <div
+            className="mt-6 p-4 bg-[#f0f9ff] border-l-4"
+            style={{ borderColor: primaryColor }}
+          >
+            <h2
+              className="text-xl font-semibold"
+              style={{ color: primaryColor }}
+              mb-4
+            >
+              Student Information
+            </h2>
+            <ul className="text-gray-700 space-y-2">
+              <li>
+                <strong>Name:</strong> {studentInfo.studentName}
+              </li>
+              <li>
+                <strong>Student ID:</strong> {studentInfo.studentId}
+              </li>
+              <li>
+                <strong>Program:</strong> {studentInfo.programName} (
+                {studentInfo.progShortName})
+              </li>
+              <li>
+                <strong>Department:</strong> {studentInfo.departmentName} (
+                {studentInfo.deptShortName})
+              </li>
+              <li>
+                <strong>Batch:</strong> {studentInfo.batchId} (
+                Batch {studentInfo.batchNo})
+              </li>
+              <li>
+                <strong>Shift:</strong> {studentInfo.shift}
+              </li>
+              <li>
+                <strong>Campus:</strong> {studentInfo.campusName}
+              </li>
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-6">
+          {result.length > 0 ? (
+            <div className="overflow-x-auto">
+              <h2
+                className="text-xl font-semibold"
+                style={{ color: primaryColor }}
+                mb-4
+              >
+                Semester Results
+              </h2>
+              <table className="table-auto w-full border-collapse bg-white">
+                <thead
+                  className="bg-[#72ccf6]"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <tr>
+                    <th className="px-4 py-2">#</th>
+                    <th className="px-4 py-2">Course Code</th>
+                    <th className="px-4 py-2">Course Title</th>
+                    <th className="px-4 py-2">Credit</th>
+                    <th className="px-4 py-2">Grade</th>
+                    <th className="px-4 py-2">Grade Point</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.map((sub, idx) => (
+                    <tr
+                      key={sub?.courseId}
+                      className={`text-center ${
+                        idx % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
+                      }`}
+                    >
+                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2">{sub?.customCourseId}</td>
+                      <td className="px-4 py-2">{sub?.courseTitle}</td>
+                      <td className="px-4 py-2">{sub?.totalCredit}</td>
+                      <td className="px-4 py-2">{sub?.gradeLetter}</td>
+                      <td className="px-4 py-2">{sub?.pointEquivalent}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* CGPA Display */}
+              <div
+                className="mt-4 p-4 bg-[#f0f9ff] border-l-4"
+                style={{ borderColor: primaryColor }}
+              >
+                <h3
+                  className="text-lg font-semibold text-right"
+                  style={{ color: primaryColor }}
+                >
+                  Calculated CGPA:{" "}
+                  <span className="font-black" style={{ color: primaryColor }}>{calculateCGPA()}</span>
+                </h3>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gray-600 mt-4">
+              {loading ? "Fetching results..." : "No results found"}
+            </div>
+          )}
+        </div>
+
+        {/* Copyright Section */}
+        <div className="text-center text-sm text-gray-600 mt-10">
+          <p>© {new Date().getFullYear()} Created by Md. Rakib Hassan</p>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
-}
+};
+
+export default Page;
