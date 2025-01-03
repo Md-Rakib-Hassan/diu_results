@@ -72,6 +72,10 @@ const Page = () => {
     return totalCredits > 0 ? (weightedPoints / totalCredits).toFixed(2) : 0;
   };
 
+  const calculateTotalCredits = () => {
+    return result.reduce((total, course) => total + parseFloat(course?.totalCredit || 0), 0);
+  };
+
   return (
     <div className="min-h-screen p-6 bg-gradient-to-b from-blue-50 to-blue-100 flex flex-col items-center">
       <div
@@ -80,12 +84,11 @@ const Page = () => {
       >
         {/* Color Picker Section */}
         <div className="absolute top-6 right-6">
-          <label className="text-lg font-semibold text-gray-800">Primary Color:</label>
           <input
             type="color"
             value={primaryColor}
             onChange={(e) => setPrimaryColor(e.target.value)}
-            className="ml-2 border-2 border-gray-300 rounded-md"
+            className="hidden"
           />
         </div>
 
@@ -123,7 +126,7 @@ const Page = () => {
           onClick={fetchResults}
           disabled={loading}
         >
-          {loading ? "Loading..." : "Fetch Results"}
+          {loading ? "Loading..." : "Show Results"}
         </button>
         {error && <div className="text-red-500 mt-4">{error}</div>}
 
@@ -183,7 +186,7 @@ const Page = () => {
                   className="bg-[#72ccf6]"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  <tr>
+                  <tr className="text-white">
                     <th className="px-4 py-2">#</th>
                     <th className="px-4 py-2">Course Code</th>
                     <th className="px-4 py-2">Course Title</th>
@@ -210,17 +213,22 @@ const Page = () => {
                   ))}
                 </tbody>
               </table>
-              {/* CGPA Display */}
+              {/* Total Credits and CGPA Display */}
               <div
-                className="mt-4 p-4 bg-[#f0f9ff] border-l-4"
+                className="mt-4 p-4 bg-[#f0f9ff] border-l-4 flex justify-end gap-8"
                 style={{ borderColor: primaryColor }}
               >
                 <h3
                   className="text-lg font-semibold text-right"
                   style={{ color: primaryColor }}
                 >
-                  Calculated CGPA:{" "}
-                  <span className="font-black" style={{ color: primaryColor }}>{calculateCGPA()}</span>
+                  Total Credits: <span className="font-black">{calculateTotalCredits()}</span>
+                </h3>
+                <h3
+                  className="text-lg font-semibold text-right"
+                  style={{ color: primaryColor }}
+                >
+                  Calculated CGPA: <span className="font-black">{calculateCGPA()}</span>
                 </h3>
               </div>
             </div>
